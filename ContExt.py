@@ -10,7 +10,7 @@ ATOMSPATTERN = re.compile(r"^(#(([0-9]+)(_([0-9]+))?)?)?"+\
                           r"(@([A-Za-z0-9]+'?)?((_(-?[0-9]+))(_(-?[0-9]+))?)?)?$")
 
     
-def ParseAtomsFormat(kw,pattern=ATOMSPATTERN):
+def ParseAtomsFormat(kw, pattern = ATOMSPATTERN):
 
     regsearch = re.findall(ATOMSPATTERN, kw)[0]
     
@@ -24,7 +24,7 @@ def ParseAtomsFormat(kw,pattern=ATOMSPATTERN):
     atomnummin = regsearch[18]
     atomnummax = regsearch[20]
 
-    return {'MODELMIN':   int(modelmin)   if modelmin   else None,
+    res =  {'MODELMIN':   int(modelmin)   if modelmin   else None,
             'MODELMAX':   int(modelmax)   if modelmax   else None,
             'CHAIN':      chain   if chain   else None,
             'RESIDUE':    residue if residue else None,
@@ -34,29 +34,138 @@ def ParseAtomsFormat(kw,pattern=ATOMSPATTERN):
             'ATOMNUMMIN': int(atomnummin) if atomnummin else None,
             'ATOMNUMMAX': int(atomnummax) if atomnummax else None}
 
+    if res['MODELMAX'] is None and not (res['MODELMIN'] is None):
+        res['MODELMAX'] = res['MODELMIN']
+    if res['RESNUMMAX'] is None and not (res['RESNUMMIN'] is None):
+        res['RESNUMMAX'] = res['RESNUMMIN']
+    if res['ATOMNUMMAX'] is None and not (res['ATOMNUMMIN'] is None):
+        res['ATOMNUMMAX'] = res['ATOMNUMMIN']
 
-def ParseAtoms(inpfile,mask):
+    return res
+
+
+def Allowed(atom, masks):
+
+    for mask in masks:
+
+        condition = (mask['ATOMNUMMIN'] is None or atom['id']                 >= mask['ATOMNUMMIN']) and\
+                    (mask['ATOMNUMMAX'] is None or atom['id']                 <= mask['ATOMNUMMAX']) and\
+                    (mask['ATOM']       is None or atom['auth_atom_id']       == mask['ATOM'])       and\
+                    (mask['RESNUMMIN']  is None or atom['auth_seq_id']        >= mask['RESNUMMIN'])  and\
+                    (mask['RESNUMMAX']  is None or atom['auth_seq_id']        <= mask['RESNUMMAX'])  and\
+                    (mask['RESIDUE']    is None or atom['auth_comp_id']       == mask['RESIDUE'])    and\
+                    (mask['CHAIN']      is None or atom['auth_asym_id']       == mask['CHAIN'])      and\
+                    (mask['MODELMIN']   is None or atom['pdbx_PDB_model_num'] >= mask['MODELMIN'])   and\
+                    (mask['MODELMAX']   is None or atom['pdbx_PDB_model_num'] <= mask['MODELMAX'])
+        
+        if condition:
+            return True
+    return False
+
+
+def ParseAtomPDB(line, model):
+    '''https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html'''
+    
+    res = {}
+    res["id"]                 = int(line[6:11])
+    res["auth_atom_id"]       = line[12:16].strip()
+    res["label_alt_id"]       = line[16].strip()
+    res["auth_comp_id"]       = line[17:20].strip()
+    res["auth_asym_id"]       = line[20:22].strip()
+    res["auth_seq_id"]        = int(line[22:26])
+    res["pdbx_PDB_ins_code"]  = line[26].strip()
+    res["Cartn_x"]            = float(line[30:38])
+    res["Cartn_y"]            = float(line[38:46])
+    res["Cartn_z"]            = float(line[46:54])
+    res["pdbx_PDB_model_num"] = model
+
+    return res
+
+
+def ParsePDB(inpfile, masks):
+
+    atoms = []
+    model = 1
+
+    with open(inpfile) as file:
+        for line in file:
+            if line.startswith('ATOM') or line.startswith('HETATM'):
+                atom = ParseAtomPDB(line, model)
+                if Allowed(atom,masks):
+                    atoms.append(atom)
+            elif line.startswith('MODEL'):
+                model = int(line.strip().split()[-1])
+    return atoms
+
+
+def ParseAtomCIF(line,title):
     pass
 
 
-def Atompairs(n1,n2,limit):
+def ParseCIF(inpfile, masks):
+    pass
+
+
+def GuessFormat(inpfile):
+
+    pdb = 0
+    cif = 0
+
+    with open(inpfile) as file:
+        for line in file:
+            if line.startswith('#'):
+                cif += 1
+            elif line.startswith('_atom.site'):
+                cif += 1
+            elif line.startswith('END'):
+                pdb += 1
+            elif line.startswith('MODEL'):
+                pdb += 1
+
+    return int(cif > pdb)
+
+
+def ParseAtoms(inpfile, masks):
+
+    return (ParsePDB, ParseCIF)[GuessFormat(inpfile)](inpfile, masks)
+
+
+def Atompairs(n1, n2, limit):
 
     tree1 = KDTree(n1)
     tree2 = KDTree(n2)
 
-    dist = tree1.sparse_distance_matrix(
-        tree2,
-        limit,
-        p=2,
-        output_type='ndarray'
-    )
-
+    dist = tree1.sparse_distance_matrix(tree2,
+                                        limit,
+                                        p=2,
+                                        output_type='ndarray')
     dist.sort()
-
     return dist
 
 
-def ContactExtractor(inpfile1, inpfile2=None, Range=10.0, mask1="#", mask2=None):
+def FormatAtom(atom):
+
+    atomformat = "#{model}/{chain}:{residue}_{resnum}.{inscode}@{atomname}_{atomnum}.{altloc}"
+
+    return atomformat.format(model    =atom["pdbx_PDB_model_num"],
+                             chain    =atom["auth_asym_id"],
+                             residue  =atom["auth_comp_id"],
+                             resnum   =atom["auth_seq_id"],
+                             inscode  =atom["pdbx_PDB_ins_code"],
+                             atomname =atom["auth_atom_id"],
+                             atomnum  =atom["id"],
+                             altloc   =atom["label_alt_id"])
+
+
+def PrintContacts(contacts, atoms1, atoms2, skipequal=False):
+
+    for i,j,d in contacts:
+        if skipequal and i == j:
+            continue
+        print(d, FormatAtom(atoms1[i]), FormatAtom(atoms2[j]),sep='\t')
+
+
+def ContactExtractor(inpfile1, inpfile2 = None, Range = 10.0, mask1 = "#", mask2 = None):
 
     if inpfile2 is None:
         inpfile2 = inpfile1
@@ -71,18 +180,21 @@ def ContactExtractor(inpfile1, inpfile2=None, Range=10.0, mask1="#", mask2=None)
     if not mask2:
         mask2 = [ParseAtomsFormat(''),]
 
-    atoms1 = ParseAtoms(inpfile1,mask1) ###
+    atoms1 = ParseAtoms(inpfile1,mask1)
+
+    onesetflag = False
 
     if inpfile1!=inpfile2 or mask1!=mask2:
         atoms2 = ParseAtoms(inpfile2,mask2)
     else:
         atoms2 = atoms1
+        onesetflag = True
 
-    contacts = Atompairs([(a1['X'],a1['Y'],a1['Z']) for a1 in atoms1],
-                         [(a2['X'],a2['Y'],a2['Z']) for a2 in atoms2],
+    contacts = Atompairs([(a1['Cartn_x'],a1['Cartn_y'],a1['Cartn_z']) for a1 in atoms1],
+                         [(a2['Cartn_x'],a2['Cartn_y'],a2['Cartn_z']) for a2 in atoms2],
                          Range)
 
-    PrintContacts(contacts,atoms1,atoms2) ###
+    PrintContacts(contacts, atoms1, atoms2, onesetflag)
     
 
 if __name__ == "__main__":
