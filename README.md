@@ -75,30 +75,30 @@ Options:
   
   ATOMS SPECIFICATION EXAMPLES:
   
-  atoms=#1/B:C_-1_10@O2’ - O2’ atoms of the residues with id 
-                           from -1 to 10 of chain B from 
-                           model 1
+  atoms=#1/B:C_-1_10@O2 - O2 atoms of the residues with id 
+                          from -1 to 10 of chain B from 
+                          model 1
                            
-  atoms=#                - equivalent to an empty condition
+  atoms=#               - equivalent to an empty condition
   
-  atoms=/                - equivalent to an empty condition
+  atoms=/               - equivalent to an empty condition
   
-  atoms=:                - equivalent to an empty condition
+  atoms=:               - equivalent to an empty condition
   
-  atoms=@                - equivalent to an empty condition
+  atoms=@               - equivalent to an empty condition
   
-  atoms="@C1' @C2'"      - C1’ and C2' atoms
+  atoms="@C1' @C2'"     - C1’ and C2' atoms
   
-  atoms="/B /C"          - chain B and chain C
+  atoms="/B /C"         - chain B and chain C
   
-  atoms=#1:A             - adenines in model 1
+  atoms=#1:A            - adenines in model 1
   
-  atoms=A                - not a keyword, i.e. error
+  atoms=A               - not a keyword, i.e. error
   
-  atoms=":C@O4'"         - O4' atoms of cytidines
+  atoms=":C@O4'"        - O4' atoms of cytidines
   
-  atoms=#2_3@_1_1000     - atoms with id from 1 to 1000 
-                           from model 2 or model 3
+  atoms=#2_3@_1_1000    - atoms with id from 1 to 1000 
+                          from model 2 or model 3
 
 Usage examples:
 
