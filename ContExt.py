@@ -190,9 +190,21 @@ def ContactExtractor(inpfile1, inpfile2 = None, Range = 10.0, mask1 = "#", mask2
         atoms2 = atoms1
         onesetflag = True
 
+    if not atoms1:
+        print("No atoms found")
+        exit(0)
+
+    if not atoms2:
+        print("No atoms2 found")
+        exit(0)
+
     contacts = Atompairs([(a1['Cartn_x'],a1['Cartn_y'],a1['Cartn_z']) for a1 in atoms1],
                          [(a2['Cartn_x'],a2['Cartn_y'],a2['Cartn_z']) for a2 in atoms2],
                          Range)
+
+    if not contacts.shape[0]:
+        print("No contacts found")
+        exit(0)
 
     PrintContacts(contacts, atoms1, atoms2, onesetflag)
     
