@@ -159,10 +159,16 @@ def FormatAtom(atom):
 
 def PrintContacts(contacts, atoms1, atoms2, skipequal=False):
 
+    printed_flag = False
+
     for i,j,d in contacts:
         if skipequal and i == j:
             continue
+        printed_flag = True
         print(d, FormatAtom(atoms1[i]), FormatAtom(atoms2[j]),sep='\t')
+
+    if not printed_flag:
+        print("No contacts found")
 
 
 def ContactExtractor(inpfile1, inpfile2 = None, Range = 10.0, mask1 = "#", mask2 = None):
@@ -232,7 +238,10 @@ if __name__ == "__main__":
     if "--help" in args or "-help" in args or "help" in args or\
        "--h" in args or "-h" in args or "h" in args or\
        "--H" in args or "-H" in args or "H" in args:
-        with open("README.md") as helpfile:
+
+        HOME_DIR = os.path.dirname(os.path.abspath(__file__))
+        
+        with open(os.path.join(HOME_DIR,"README.md")) as helpfile:
             print(helpfile.read())
         exit(0)
 
