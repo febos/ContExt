@@ -66,20 +66,20 @@ def Allowed(atom, masks):
 def ParseAtomPDB(line, model):
     '''https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html'''
     
-    res = {}
-    res["id"]                 = int(line[6:11])
-    res["auth_atom_id"]       = line[12:16].strip()
-    res["label_alt_id"]       = line[16].strip()
-    res["auth_comp_id"]       = line[17:20].strip()
-    res["auth_asym_id"]       = line[20:22].strip()
-    res["auth_seq_id"]        = int(line[22:26])
-    res["pdbx_PDB_ins_code"]  = line[26].strip()
-    res["Cartn_x"]            = float(line[30:38])
-    res["Cartn_y"]            = float(line[38:46])
-    res["Cartn_z"]            = float(line[46:54])
-    res["pdbx_PDB_model_num"] = model
+    atom = {}
+    atom["id"]                 = int(line[6:11])
+    atom["auth_atom_id"]       = line[12:16].strip()
+    atom["label_alt_id"]       = line[16].strip()
+    atom["auth_comp_id"]       = line[17:20].strip()
+    atom["auth_asym_id"]       = line[20:22].strip()
+    atom["auth_seq_id"]        = int(line[22:26])
+    atom["pdbx_PDB_ins_code"]  = line[26].strip()
+    atom["Cartn_x"]            = float(line[30:38])
+    atom["Cartn_y"]            = float(line[38:46])
+    atom["Cartn_z"]            = float(line[46:54])
+    atom["pdbx_PDB_model_num"] = model
 
-    return res
+    return atom
 
 
 def ParsePDB(inpfile, masks):
@@ -91,7 +91,7 @@ def ParsePDB(inpfile, masks):
         for line in file:
             if line.startswith('ATOM') or line.startswith('HETATM'):
                 atom = ParseAtomPDB(line, model)
-                if Allowed(atom,masks):
+                if Allowed(atom, masks):
                     atoms.append(atom)
             elif line.startswith('MODEL'):
                 model = int(line.strip().split()[-1])
@@ -99,11 +99,47 @@ def ParsePDB(inpfile, masks):
 
 
 def ParseAtomCIF(line,title):
-    pass
+
+    linesplit = line.strip().split()
+    atom = {title[i]:linesplit[i] for i in range(len(title))}
+
+    for frag in ("atom", "comp", "asym", "seq"):
+
+        auth  =  "auth_{}_id".format(frag)
+        label = "label_{}_id".format(frag)
+        
+        if auth not in atom and label in atom:
+            atom[auth] = atom[label]
+
+    for int_token in ("id", "auth_seq_id", "pdbx_PDB_model_num"):
+        atom[int_token] = int(atom[int_token]) if int_token in atom else float("nan")
+
+    for float_token in ("Cartn_x", "Cartn_y", "Cartn_z"):
+        atom[float_token] = float(atom[float_token]) if float_token in atom else float("nan")
+    
+    if      "auth_atom_id" not in atom: atom["auth_atom_id"]      = ''
+    if      "label_alt_id" not in atom: atom["label_alt_id"]      = ''
+    if      "auth_comp_id" not in atom: atom["auth_comp_id"]      = ''
+    if      "auth_asym_id" not in atom: atom["auth_asym_id"]      = ''
+    if "pdbx_PDB_ins_code" not in atom: atom["pdbx_PDB_ins_code"] = ''
+
+    return atom
 
 
 def ParseCIF(inpfile, masks):
-    pass
+
+    atoms = []
+    title = []
+
+    with open(inpfile) as file:
+        for line in file:
+            if line.startswith("_atom_site."):
+                title.append(line.strip().split('.')[-1])
+            elif line.startswith('ATOM') or line.startswith('HETATM'):
+                atom = ParseAtomCIF(line, title)
+                if Allowed(atom, masks):
+                    atoms.append(atom)
+    return atoms
 
 
 def GuessFormat(inpfile):
