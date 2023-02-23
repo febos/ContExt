@@ -79,6 +79,9 @@ def ParseAtomPDB(line, model):
     atom["Cartn_z"]            = float(line[46:54])
     atom["pdbx_PDB_model_num"] = model
 
+    if atom["pdbx_PDB_ins_code"] == '?':
+        atom["pdbx_PDB_ins_code"] = ''
+
     return atom
 
 
@@ -118,10 +121,17 @@ def ParseAtomCIF(line,title):
         atom[float_token] = float(atom[float_token]) if float_token in atom else float("nan")
     
     if      "auth_atom_id" not in atom: atom["auth_atom_id"]      = ''
+    if     "label_atom_id" not in atom: atom["label_atom_id"]     = ''
     if      "label_alt_id" not in atom: atom["label_alt_id"]      = ''
     if      "auth_comp_id" not in atom: atom["auth_comp_id"]      = ''
     if      "auth_asym_id" not in atom: atom["auth_asym_id"]      = ''
     if "pdbx_PDB_ins_code" not in atom: atom["pdbx_PDB_ins_code"] = ''
+
+    if atom["pdbx_PDB_ins_code"] == '?':
+        atom["pdbx_PDB_ins_code"] = ''
+
+    atom["auth_atom_id"] = atom["auth_atom_id"].strip('"')
+    atom["label_atom_id"] = atom["label_atom_id"].strip('"')
 
     return atom
 
