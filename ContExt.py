@@ -117,7 +117,7 @@ def ParseAtomCIF(line,title):
     for int_token in ("id", "auth_seq_id", "pdbx_PDB_model_num"):
         atom[int_token] = int(atom[int_token]) if int_token in atom else float("nan")
 
-    for float_token in ("Cartn_x", "Cartn_y", "Cartn_z"):
+    for float_token in ("Cartn_x", "Cartn_y", "Cartn_z","occupancy","B_iso_or_equiv"):
         atom[float_token] = float(atom[float_token]) if float_token in atom else float("nan")
     
     if      "auth_atom_id" not in atom: atom["auth_atom_id"]      = ''
