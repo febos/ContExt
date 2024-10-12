@@ -1,4 +1,4 @@
-Contact Extracor (ContExt), ver. 0.9 (January 2023).
+Contact Extractor (ContExt), ver. 0.9 (January 2023).
 
 Usage:
 
