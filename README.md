@@ -3,7 +3,7 @@ Contact Extractor (ContExt), ver. 1.0 (May 2025).
 
 Installation:
 
-  pip instal ContactExtractor
+  pip install ContactExtractor
 
 Usage:
 
