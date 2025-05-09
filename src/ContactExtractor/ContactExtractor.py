@@ -203,26 +203,68 @@ def FormatAtom(atom):
                              altloc   =atom["label_alt_id"])
 
 
-def PrintContacts(contacts, atoms1, atoms2, skipequal=False):
+def PrintContacts(contacts, atoms1, atoms2,
+                  printing = False, onesetflag = False):
 
     printed_flag = False
 
+    ready_contacts = [] 
+
     for i,j,d in contacts:
-        if skipequal and i == j:
+        if onesetflag and i==j:
             continue
         printed_flag = True
-        print(d, FormatAtom(atoms1[i]), FormatAtom(atoms2[j]),sep='\t')
+        if printing:
+            print(d, FormatAtom(atoms1[i]), FormatAtom(atoms2[j]),sep='\t')
+        else:
+            ready_contacts.append([d, FormatAtom(atoms1[i]), FormatAtom(atoms2[j])])
 
-    if not printed_flag:
+    if printing and not printed_flag:
         print("No contacts found")
 
+    return ready_contacts
 
-def ContactExtractor(inpfile1, inpfile2 = None, Range = 10.0, mask1 = "#", mask2 = None):
+
+def ContExt(inpfile1, inpfile2 = None, RANGE = 10.0, mask1 = "#", mask2 = None,
+                     printing = False):
+
+    HOME_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    if not os.path.exists(inpfile1) and\
+       os.path.exists(os.path.join(HOME_DIR, inpfile1)):
+        inpfile1 = os.path.join(HOME_DIR, inpfile1)
+
+    elif not os.path.exists(inpfile1):
+        raise ValueError("ERROR: something is wrong with your input file")
 
     if inpfile2 is None:
         inpfile2 = inpfile1
+
+    if not os.path.exists(inpfile2) and\
+       os.path.exists(os.path.join(HOME_DIR, inpfile2)):
+        inpfile2 = os.path.join(HOME_DIR, inpfile2)
+
+    elif not os.path.exists(inpfile2):
+        raise ValueError("ERROR: something is wrong with your input2 file")
+
+    try:
+        RANGE = float(RANGE)
+    except:
+        raise ValueError("ERROR: something is wrong with your range value")
+    
     if mask2 is None:
         mask2 = mask1
+
+    mask1 = mask1.split()
+    mask2 = mask2.split()
+
+    for kw in mask1:
+        if not ATOMSPATTERN.match(kw):
+            raise ValueError("ERROR: something is wrong with your atoms/mask1 value")
+
+    for kw in mask2:
+        if not ATOMSPATTERN.match(kw):
+            raise ValueError("ERROR: something is wrong with your atoms2/mask2 value")
 
     mask1 = [ParseAtomsFormat(kw) for kw in mask1]
     mask2 = [ParseAtomsFormat(kw) for kw in mask2]
@@ -244,30 +286,33 @@ def ContactExtractor(inpfile1, inpfile2 = None, Range = 10.0, mask1 = "#", mask2
 
     if not atoms1:
         print("No atoms found")
-        exit(0)
+        return []
 
     if not atoms2:
         print("No atoms2 found")
-        exit(0)
+        return []
 
     contacts = Atompairs([(a1['Cartn_x'],a1['Cartn_y'],a1['Cartn_z']) for a1 in atoms1],
                          [(a2['Cartn_x'],a2['Cartn_y'],a2['Cartn_z']) for a2 in atoms2],
-                         Range)
+                         RANGE)       
 
     if not contacts.shape[0]:
         print("No contacts found")
-        exit(0)
+        return []
 
-    PrintContacts(contacts, atoms1, atoms2, onesetflag)
+    contacts = PrintContacts(contacts, atoms1, atoms2,
+                             printing, onesetflag)
+
+    return contacts
     
 
-if __name__ == "__main__":
+def Main():
 
     def PrintUsage():
         print()
         print("Usage:")
         print()
-        print("pathto/python3 pathto/ContExt.py input=pathto/coordfile [OPTIONS]")
+        print("ContExt input=pathto/coordfile [OPTIONS]")
         print()
         print("try --help for a detailed description")
         print()
@@ -295,40 +340,29 @@ if __name__ == "__main__":
 
         if arg.startswith("input="):
             INPFILE1 = arg[6:]
-            if not os.path.exists(INPFILE1):
-                print("ERROR: something is wrong with your input file")
-                exit(1)
 
         elif arg.startswith("input2="):
             INPFILE2 = arg[7:]
-            if not os.path.exists(INPFILE2):
-                print("ERROR: something is wrong with your input2 file")
-                exit(1)
 
         elif arg.startswith("range="):
-            try:
-                RANGE = float(arg[6:])
-            except:
-                print("ERROR: something is wrong with your range value")
-                exit(1)
+            RANGE = arg[6:]
 
         elif arg.startswith("atoms="):
-            ATOMS1 = arg[6:].split()
-            for kw in ATOMS1:
-                if not ATOMSPATTERN.match(kw):
-                    print("ERROR: something is wrong with your atoms value")
-                    exit(1)
+            ATOMS1 = arg[6:]
 
         elif arg.startswith("atoms2="):
-            ATOMS2 = arg[7:].split()
-            for kw in ATOMS2:
-                if not ATOMSPATTERN.match(kw):
-                    print("ERROR: something is wrong with your atoms2 value")
-                    exit(1)
+            ATOMS2 = arg[7:]
 
     if INPFILE1 is None:
         PrintUsage()
 
-    ContactExtractor(INPFILE1, INPFILE2, RANGE, ATOMS1, ATOMS2)
+    ContExt(INPFILE1, INPFILE2, RANGE, ATOMS1, ATOMS2, printing = True)
+
+
+if __name__ == "__main__":
+
+    Main()
+
+
 
 
